@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import cv2
 from keras.models import load_model
+from matplotlib import pyplot as plt
 
 
 # Match contours to license plate or character template
@@ -54,11 +55,11 @@ def find_contours(dimensions, img) :
             
     # Return characters on ascending order with respect to the x-coordinate (most-left character first)
             
+    plt.show()
     # arbitrary function that stores sorted list of character indeces
     indices = sorted(range(len(x_cntr_list)), key=lambda k: x_cntr_list[k])
     img_res_copy = []
     for idx in indices:
-        img_res[idx] = cv2.resize(img_res[idx], (12, 28))
         img_res_copy.append(img_res[idx])# stores character images according to their index
     img_res = np.array(img_res_copy)
 
@@ -73,8 +74,9 @@ def segment_characters(image) :
     img_gray_lp = cv2.cvtColor(img_lp, cv2.COLOR_BGR2GRAY)
     img_gray_lp = cv2.GaussianBlur(img_gray_lp, (5, 5), 0)
     _, img_binary_lp = cv2.threshold(img_gray_lp, 200, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-    img_binary_lp = cv2.erode(img_binary_lp, (3,3))
-    img_binary_lp = cv2.dilate(img_binary_lp, (3,3))
+    kernel = np.ones((3,3),np.uint8)
+    img_binary_lp = cv2.dilate(img_binary_lp,kernel,iterations = 2)
+    img_binary_lp = cv2.erode(img_binary_lp,kernel,iterations = 1)
 
     LP_WIDTH = img_binary_lp.shape[0]
     LP_HEIGHT = img_binary_lp.shape[1]
@@ -91,11 +93,9 @@ def segment_characters(image) :
                        LP_HEIGHT/10,
                        2*LP_HEIGHT/3]
 
-    cv2.imwrite('contour.jpg',img_binary_lp)
-
     # Get contours within cropped license plate
     char_list = find_contours(dimensions, img_binary_lp)
-    # char_list = cv2.resize(char_list, (28, 28))
+
     return char_list
 
 # Predicting the output
@@ -106,7 +106,7 @@ def fix_dimension(img):
         return new_img
 
 def detectChar(img):
-    model = load_model("./models/model.h5")
+    model = load_model("/content/model.h5")
     char=segment_characters(img)
     dic = {}
     characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
